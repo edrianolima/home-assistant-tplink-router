@@ -20,6 +20,7 @@ from tplinkrouterc6u import (
     VPNStatus,
     PortStatus,
     IPv4Reservation,
+    MeshNode,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
@@ -42,7 +43,8 @@ def collect_status(
         reservations: list[IPv4Reservation] | None,
         logger: Logger,
 ) -> tuple[Status, LTEStatus | None, list[ServingCell] | None, VPNStatus | None,
-           VpnClientStatus | None, list[PortStatus] | None, list[SMS] | None, list[IPv4Reservation] | None]:
+           VpnClientStatus | None, list[PortStatus] | None, list[SMS] | None,
+           list[IPv4Reservation] | None, list[MeshNode] | None]:
     """Gather all status data from the router; a failing SMS fetch must not break the update."""
     status = router.get_status()
     sms_list = None
@@ -60,6 +62,9 @@ def collect_status(
         sms_list = safe_call(router.get_sms, logger, "fetch SMS")
     if reservations is not None:
         reservations = safe_call(router.get_ipv4_reservations, logger, "fetch IPv4 reservations")
+    mesh_nodes = None
+    if hasattr(router, "get_mesh_nodes"):
+        mesh_nodes = safe_call(router.get_mesh_nodes, logger, "fetch mesh nodes")
     return (
         status,
         lte_status,
@@ -69,6 +74,7 @@ def collect_status(
         port_status,
         sms_list,
         reservations,
+        mesh_nodes,
     )
 
 
@@ -87,6 +93,7 @@ class TPLinkRouterCoordinator(DataUpdateCoordinator):
             vpn_client_status: VpnClientStatus | None = None,
             serving_cells: list[ServingCell] | None = None,
             port_status: list[PortStatus] | None = None,
+            mesh_nodes: list[MeshNode] | None = None,
             retries: int = 3,
             backoff_seconds: float = 1.0,
             scan_pause_minutes: int = DEFAULT_SCAN_PAUSE,
@@ -101,6 +108,10 @@ class TPLinkRouterCoordinator(DataUpdateCoordinator):
         self.lte_status = lte_status
         self.serving_cells = serving_cells
         self.port_status = port_status
+        # Fetched during setup so the entities exist from the start; a coordinator
+        # update would only arrive one scan interval later. None for any client
+        # that is not a mesh system.
+        self.mesh_nodes = mesh_nodes
         self.retries = retries
         self.backoff_seconds = backoff_seconds
         self.scan_pause_minutes = scan_pause_minutes
@@ -276,6 +287,7 @@ class TPLinkRouterCoordinator(DataUpdateCoordinator):
                         self.port_status,
                         sms_list,
                         self.reservations,
+                        self.mesh_nodes,
                     ) = await self.hass.async_add_executor_job(update_once)
 
                 if sms_list is not None:

@@ -189,6 +189,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                         client.__class__.__name__,
                         err,
                     )
+            mesh_nodes = None
+            if hasattr(client, "get_mesh_nodes"):
+                try:
+                    mesh_nodes = client.get_mesh_nodes()
+                except Exception as err:
+                    _LOGGER.debug(
+                        "TP-Link router %s: get_mesh_nodes failed: %s",
+                        client.__class__.__name__,
+                        err,
+                    )
             return (
                 firm,
                 stat,
@@ -199,6 +209,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 port_status,
                 sms_list,
                 reservations,
+                mesh_nodes,
             )
 
         (
@@ -211,6 +222,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             port_status,
             sms_list,
             reservations,
+            mesh_nodes,
         ) = await hass.async_add_executor_job(
             TPLinkRouterCoordinator.request, client, callback
         )
@@ -225,7 +237,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Create device coordinator and fetch data
     coordinator = TPLinkRouterCoordinator(hass, client, entry.data[CONF_SCAN_INTERVAL], firmware, status,
                                           lte_status, _LOGGER, entry.entry_id, vpn_server_stat, vpn_client_status,
-                                          serving_cells, port_status,
+                                          serving_cells, port_status, mesh_nodes,
                                           retries=entry.data.get(CONF_SCAN_RETRIES, DEFAULT_SCAN_RETRIES),
                                           backoff_seconds=entry.data.get(CONF_SCAN_BACKOFF, DEFAULT_SCAN_BACKOFF),
                                           scan_pause_minutes=entry.data.get(CONF_SCAN_PAUSE, DEFAULT_SCAN_PAUSE),
