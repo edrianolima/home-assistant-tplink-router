@@ -6,6 +6,8 @@
     "documentation": "https://github.com/AlexandrErohin/home-assistant-tplink-router",
     "iot_class": "local_polling",
     "issue_tracker": "https://github.com/AlexandrErohin/home-assistant-tplink-router/issues",
-    "requirements": ["tplinkrouterc6u==5.34.0"],
+    "requirements": [
+      "tplinkrouterc6u @ git+https://github.com/edrianolima/TP-Link-Archer-C6U@feat/deco-mesh-nodes"
+    ],
     "version": "2.40.0"
   }
